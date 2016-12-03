@@ -1,6 +1,6 @@
 <?php
 
-namespace Phpjs;
+namespace Alexbusu;
 
 class Phpjs implements \JsonSerializable
 {
