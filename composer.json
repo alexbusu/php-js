@@ -1,0 +1,16 @@
+{
+  "name": "alexbusu/php-js",
+  "description": "Micro-framework which translates PHP-defined actions in browser using jQuery",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Alexandru Busuioc",
+      "email": "busuioc.alexandru@gmail.com"
+    }
+  ],
+  "autoload": {
+    "psr-4": {
+      "Phpjs\\": "src/"
+    }
+  }
+}
