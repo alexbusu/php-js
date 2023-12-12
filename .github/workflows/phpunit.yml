@@ -1,0 +1,49 @@
+name: "PHPUnit tests & Static analysis"
+
+on:
+  pull_request:
+  push:
+
+jobs:
+  phpunit:
+    name: "PHPUnit tests (PHP v${{ matrix.php-version }})"
+
+    runs-on: ${{ matrix.operating-system }}
+
+    strategy:
+      matrix:
+        php-version:
+          - "7.4"
+          - "8.0"
+          - "8.1"
+          - "8.2"
+          - "8.3"
+        operating-system:
+          - "ubuntu-latest"
+
+    steps:
+      - name: "Checkout"
+        uses: "actions/checkout@v2"
+
+      - name: "Install PHP"
+        uses: "shivammathur/setup-php@v2"
+        with:
+          coverage: "pcov"
+          php-version: "${{ matrix.php-version }}"
+          ini-values: memory_limit=-1
+          tools: composer:v2, cs2pr
+
+      - name: "Cache dependencies"
+        uses: "actions/cache@v2"
+        with:
+          path: |
+            ~/.composer/cache
+            vendor
+          key: "php-${{ matrix.php-version }}"
+          restore-keys: "php-${{ matrix.php-version }}"
+
+      - name: "Test with lowest dependencies"
+        run: "composer update --prefer-lowest --no-interaction --no-progress && vendor/bin/phpunit && vendor/bin/psalm.phar --show-info=true && vendor/bin/rector --dry-run"
+
+      - name: "Test with highest dependencies"
+        run: "composer update                 --no-interaction --no-progress && vendor/bin/phpunit && vendor/bin/psalm.phar --show-info=true && vendor/bin/rector --dry-run"
