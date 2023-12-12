@@ -2,62 +2,79 @@
 
 namespace Alexbusu;
 
-class Phpjs implements \JsonSerializable
+use JsonSerializable;
+use Throwable;
+
+final class Phpjs implements JsonSerializable
 {
-    /** @var self */
-    private static $response;
-    /** @var bool */
-    public static $debug = false;
+    private static ?self $response = null;
 
-    /** @var array */
-    private $triggers = [];
-    /** @var array */
-    private $additionals = [];
+    public static bool $debug = false;
 
-    const UNDO_MESSAGE_DEFAULT_TIMEOUT = 8000;
-    const MESSAGE_DEFAULT_TIMEOUT = 5000;
+    /** @var array<int|string, mixed> */
+    private array $triggers = [];
 
-    const TRIGGER_MESSAGE = 'doc.Status';
-    const TRIGGER_REDIRECT = 'winrd'; // window.redirect
-    const TRIGGER_RELOAD = 'winreload'; // window.redirect
-    const TRIGGER_CONSOLE_ERROR = 'error.console';
-    const TRIGGER_CONSOLE_WARN = 'warn.console';
-    const TRIGGER_CONSOLE_TABLE = 'table.console';
-    const TRIGGER_CONSOLE_INFO = 'info.console';
-    const TRIGGER_CONSOLE_LOG = 'log.console';
-    const TRIGGER_SET_COOKIE = 'set-cookie';
+    private array $additional = [];
 
-    public function __construct( array $options = [] )
+    public const UNDO_MESSAGE_DEFAULT_TIMEOUT = 8000;
+
+    public const MESSAGE_DEFAULT_TIMEOUT = 5000;
+
+    public const TRIGGER_MESSAGE = 'doc.Status';
+
+    public const TRIGGER_REDIRECT = 'winrd';
+
+    public const TRIGGER_RELOAD = 'winreload';
+
+    public const TRIGGER_CONSOLE_ERROR = 'error.console';
+
+    public const TRIGGER_CONSOLE_WARN = 'warn.console';
+
+    public const TRIGGER_CONSOLE_TABLE = 'table.console';
+
+    public const TRIGGER_CONSOLE_INFO = 'info.console';
+
+    public const TRIGGER_CONSOLE_LOG = 'log.console';
+
+    public const TRIGGER_SET_COOKIE = 'set-cookie';
+
+    /**
+     * @param array{'debug': bool}|array<never, never> $options
+     */
+    public function __construct(array $options = [])
     {
-        isset( $options[ 'debug' ] ) && ( self::$debug = (bool) $options[ 'debug' ] );
+        if (isset($options['debug'])) {
+            self::$debug = $options['debug'];
+        }
     }
 
     /**
-     * @param string|\Exception $message
-     * @param array                   $additional
-     * @return $this
+     * @param string|Throwable $message
      */
-    public function message( $message = '' , array $additional = [] )
+    public function message($message = '', array $additional = []): self
     {
-        if( $message instanceof \Exception ){
-            $message = self::exceptionMessage( $message , $additional );
-        } elseif( is_string( $message ) ) {
-            $message = self::successMessage( $message , $additional );
+        if ($message instanceof Throwable) {
+            $message = self::exceptionMessage($message, $additional);
         } else {
-            return $this;
+            $message = self::successMessage($message, $additional);
         }
-        $this->trigger( self::TRIGGER_MESSAGE , $message );
+
+        /** @psalm-suppress MixedArgumentTypeCoercion */
+        $this->trigger(self::TRIGGER_MESSAGE, $message);
+
         return $this;
     }
 
     /**
      * @param mixed $exception
-     * @param array $additional
-     * @return array
+     *
+     * @return ((int|string)[]|bool|int|mixed|null|string)[]
+     *
+     * @psalm-return array{success: false|mixed, message: mixed|string, type: 'warning'|mixed, msgTimeout: 5000|mixed, closeBtn: mixed|true, cssClass: ''|mixed, exception: array{code: int|string, message: string, trace: string}|mixed|null,...}
      */
-    public static function exceptionMessage( $exception , array $additional = [] ){
-        if ( $exception instanceof \Exception ) {
-            /** @var \Exception $exception */
+    public static function exceptionMessage($exception, array $additional = []): array
+    {
+        if ($exception instanceof Throwable) {
             $message = $exception->getMessage();
             $exception = self::$debug
                 ? [
@@ -67,160 +84,196 @@ class Phpjs implements \JsonSerializable
                 ]
                 : null;
         } else {
-            $message = print_r( $exception, true );
+            $message = print_r($exception, true);
             $exception = null;
         }
-        return array_merge( [
-            'success' => false ,
-            'message' => $message ,
-            'type' => 'warning' ,
-            'msgTimeout' => self::MESSAGE_DEFAULT_TIMEOUT ,
-            'closeBtn' => true ,
+
+        return array_merge([
+            'success' => false,
+            'message' => $message,
+            'type' => 'warning',
+            'msgTimeout' => self::MESSAGE_DEFAULT_TIMEOUT,
+            'closeBtn' => true,
             'cssClass' => '',
             'exception' => $exception,
-        ] , $additional );
+        ], $additional);
     }
 
     /**
-     * @param string $message
-     * @param array  $additional
-     * @return array
+     * @return (int|mixed|string|true)[]
+     *
+     * @psalm-return array{success: mixed|true, message: mixed|string, type: 'success'|mixed, msgTimeout: 5000|mixed, closeBtn: mixed|true, cssClass: ''|mixed,...}
      */
-    public static function successMessage( $message = '' , array $additional = [] ){
-        return array_merge( [
+    public static function successMessage(string $message, array $additional = []): array
+    {
+        return array_merge([
             'success' => true,
-            'message' => print_r( $message , true ),
+            'message' => print_r($message, true),
             'type' => 'success',
-            'msgTimeout' => self::MESSAGE_DEFAULT_TIMEOUT ,
-            'closeBtn' => true ,
-            'cssClass' => ''
-        ] , $additional );
+            'msgTimeout' => self::MESSAGE_DEFAULT_TIMEOUT,
+            'closeBtn' => true,
+            'cssClass' => '',
+        ], $additional);
+    }
+
+    public static function failMessage(string $message = '', array $additional = []): array
+    {
+        return self::exceptionMessage($message, $additional);
     }
 
     /**
-     * @param string $message
-     * @param array  $additional
-     * @return array
+     * @param array{'debug':bool}|array<never, never> $options
      */
-    public static function failMessage( $message = '' , array $additional = [] ){
-        return self::exceptionMessage( $message , $additional );
-    }
+    public static function response(array $options = []): self
+    {
+        if (!(self::$response instanceof self)) {
+            self::$response = new self($options);
+        }
 
-    public static function response( array $options = [] ){
-        if( !( self::$response instanceof self ) ) self::$response = new self( $options );
         return self::$response;
     }
 
     /**
-     * Prepare the redirect trigger info
+     * Prepare the redirect trigger info.
+     * In options, you can specify the 'timeout', in seconds, for when the redirect should trigger.
      *
-     * In options you can specify the 'timeout', in secons, for when the redirect should trigger
-     *
-     * @param string $url
-     * @param array $options
-     * @return $this
+     * @param array{'timeout': int|float}|array<never, never> $options
      */
-    public function redirect($url , array $options = [] ){
+    public function redirect(string $url, array $options = []): self
+    {
         $defaults = [
             'url' => $url,
             'timeout' => 0, // seconds
         ];
-        $options = array_merge( $defaults , $options );
-        $this->trigger( self::TRIGGER_REDIRECT , $options );
+        $options = array_merge($defaults, $options);
+        $this->trigger(self::TRIGGER_REDIRECT, $options);
+
         return $this;
     }
 
     /**
-     * Attach additional data to json respone
-     * @param array $additionals
-     * @return self
+     * Attach additional data to json response.
      */
-    public function attach( array $additionals = [] ){
-        $this->additionals = array_merge( $this->additionals , $additionals );
-        return $this;
-    }
-
-    public function consoleWarn( $data ){
-        $this->trigger( self::TRIGGER_CONSOLE_WARN , $data );
-        return $this;
-    }
-
-    public function consoleTable( $data ){
-        $this->trigger( self::TRIGGER_CONSOLE_TABLE , $data );
-        return $this;
-    }
-
-    public function consoleError( $message , $data ){
-        $this->trigger( self::TRIGGER_CONSOLE_ERROR , [ 'message' => $message , 'trace' => $data ] );
-        return $this;
-    }
-
-    public function consoleInfo( $data ){
-        $this->trigger( self::TRIGGER_CONSOLE_INFO , $data );
-        return $this;
-    }
-
-    public function consoleLog( $data ){
-        $this->trigger( self::TRIGGER_CONSOLE_LOG , $data );
-        return $this;
-    }
-
-    public function trigger( $triggerName , $triggerDataOrSelector , array $triggerData = [] )
+    public function attach(array $additional = []): self
     {
-        if( func_num_args() == 2 ){
+        $this->additional = array_merge($this->additional, $additional);
+
+        return $this;
+    }
+
+    /**
+     * @param array<int|string, JsonSerializable|scalar|array>|scalar $data
+     */
+    public function consoleWarn($data): self
+    {
+        $this->trigger(self::TRIGGER_CONSOLE_WARN, $data);
+
+        return $this;
+    }
+
+    /**
+     * @param array<int|string, JsonSerializable|scalar|array>|scalar $data
+     */
+    public function consoleTable($data): self
+    {
+        $this->trigger(self::TRIGGER_CONSOLE_TABLE, $data);
+
+        return $this;
+    }
+
+    /**
+     * @param array<int|string, JsonSerializable|scalar|array>|scalar $data
+     */
+    public function consoleError(string $message, $data): self
+    {
+        $this->trigger(self::TRIGGER_CONSOLE_ERROR, ['message' => $message, 'trace' => $data]);
+
+        return $this;
+    }
+
+    /**
+     * @param array<int|string, JsonSerializable|scalar|array>|scalar $data
+     */
+    public function consoleInfo($data): self
+    {
+        $this->trigger(self::TRIGGER_CONSOLE_INFO, $data);
+
+        return $this;
+    }
+
+    /**
+     * @param array<int|string, JsonSerializable|scalar|array>|scalar $data
+     */
+    public function consoleLog($data): self
+    {
+        $this->trigger(self::TRIGGER_CONSOLE_LOG, $data);
+
+        return $this;
+    }
+
+    /**
+     * @param array<int|string, JsonSerializable|array<array-key, mixed>|scalar>|scalar $triggerDataOrSelector
+     * @param array<int|string, JsonSerializable|array<array-key, mixed>|scalar> $triggerData
+     */
+    public function trigger(string $triggerName, $triggerDataOrSelector, array $triggerData = []): self
+    {
+        if (func_num_args() == 2) {
             $this->triggers[] = [
-                'trigger' => $triggerName ,
-                'selector' => null ,
-                'data' => $triggerDataOrSelector ,
+                'trigger' => $triggerName,
+                'selector' => null,
+                'data' => $triggerDataOrSelector,
             ];
         } else {
             $this->triggers[] = [
-                'trigger' => $triggerName ,
-                'selector' => $triggerDataOrSelector ,
-                'data' => $triggerData ,
+                'trigger' => $triggerName,
+                'selector' => $triggerDataOrSelector,
+                'data' => $triggerData,
             ];
         }
+
         return $this;
     }
 
-    public function toArray()
+    /**
+     * @return (array|mixed)[]
+     *
+     * @psalm-return array{_: array<int|string, mixed>,...}
+     */
+    public function toArray(): array
     {
-        return array_merge( $this->additionals , [
-            '_' => $this->triggers ,
-        ] );
+        return array_merge($this->additional, [
+            '_' => $this->triggers,
+        ]);
     }
 
     /**
-     * @param bool|false $returnOutput
      * @return int|string
      */
-    public function toHtml( $returnOutput = false )
+    public function toHtml(bool $returnOutput = false)
     {
-        $out = '<div data-trigger style="display:none">' . self::json_encode( $this->triggers ) . '</div>';
-        json_last_error();
-        json_last_error_msg();
-        $this->triggers = array();
-        if( $returnOutput ) return $out;
-        else return print $out;
-    }
-
-    private static function json_encode($mixed , $options = null){
-        if ( TRUE === version_compare( PHP_VERSION , '5.3.0' , '>=' ) ){
-            is_null( $options ) && $options = JSON_HEX_TAG; // @link http://www.php.net/manual/en/json.constants.php#constant.json-hex-tag
-            return json_encode( $mixed , $options );
-        } else {
-            return json_encode( $mixed );
+        $out = '<div data-trigger style="display:none">'.$this->jsonEncode($this->triggers).'</div>';
+        $this->triggers = [];
+        if ($returnOutput) {
+            return $out;
         }
+
+        return print $out;
     }
 
     /**
-     * Specify data which should be serialized to JSON
-     * @link http://php.net/manual/en/jsonserializable.jsonserialize.php
-     * @return mixed data which can be serialized by <b>json_encode</b>,
-     * which is a value of any type other than a resource.
-     * @since 5.4.0
+     * @param array<int|string, mixed> $mixed
+     * @param int|null $options {@see json_encode()} options.
      */
-    function jsonSerialize()
+    private function jsonEncode(array $mixed, int $options = null): string
+    {
+        if (is_null($options)) {
+            $options = JSON_HEX_TAG;
+        }
+
+        return (string)json_encode($mixed, $options);
+    }
+
+    public function jsonSerialize(): array
     {
         return $this->toArray();
     }
