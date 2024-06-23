@@ -34,7 +34,7 @@ publish:
 		echo "You can only publish from master branch!"; \
 		read -p "Do you want to checkout the origin/master? [y/N] " push; \
 		if [ $${push:-N} = "y" ]; then \
-			git checkout -B origin/master; \
+			git fetch && git checkout -B master origin/master; \
 		else \
 			echo "> Aborting checkout and publish."; \
 			exit 2; \
