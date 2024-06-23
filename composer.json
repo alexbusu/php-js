@@ -1,6 +1,7 @@
 {
   "name": "alexbusu/php-js",
   "description": "Micro-framework which translates PHP-defined actions in browser using jQuery",
+  "version": "3.0.1",
   "license": "MIT",
   "authors": [
     {

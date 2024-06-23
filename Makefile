@@ -4,7 +4,10 @@ init:
 composer-update:
 	docker run --rm -v $$(pwd):/pkg --workdir=/pkg composer:2.6.5 update
 
-composer-env:
+composer-update-lowest:
+	docker run --rm -v $$(pwd):/pkg --workdir=/pkg composer:2.6.5 update --prefer-lowest
+
+composer-shell:
 	docker run --rm -v $$(pwd):/pkg --workdir=/pkg -it --entrypoint=/bin/sh composer:2.6.5
 
 phpunit:
