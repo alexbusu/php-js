@@ -2,9 +2,16 @@
 
 namespace Alexbusu;
 
+use ArrayAccess;
 use JsonSerializable;
 use Throwable;
 
+/**
+ * @psalm-type JsonData array<array-key, mixed>|JsonSerializable|scalar|ArrayAccess
+ * @psalm-type DebugOption array{'debug': bool}
+ * @psalm-type TimeoutOptions array{'timeout': int|float}
+ * @psalm-type MaybeNothing array<never, never>
+ */
 final class Phpjs implements JsonSerializable
 {
     private static ?self $response = null;
@@ -39,7 +46,7 @@ final class Phpjs implements JsonSerializable
     public const TRIGGER_SET_COOKIE = 'set-cookie';
 
     /**
-     * @param array{'debug': bool}|array<never, never> $options
+     * @param DebugOption|MaybeNothing $options
      */
     public function __construct(array $options = [])
     {
@@ -59,7 +66,6 @@ final class Phpjs implements JsonSerializable
             $message = self::successMessage($message, $additional);
         }
 
-        /** @psalm-suppress MixedArgumentTypeCoercion */
         $this->trigger(self::TRIGGER_MESSAGE, $message);
 
         return $this;
@@ -122,7 +128,7 @@ final class Phpjs implements JsonSerializable
     }
 
     /**
-     * @param array{'debug':bool}|array<never, never> $options
+     * @param DebugOption|MaybeNothing $options
      */
     public static function response(array $options = []): self
     {
@@ -137,7 +143,7 @@ final class Phpjs implements JsonSerializable
      * Prepare the redirect trigger info.
      * In options, you can specify the 'timeout', in seconds, for when the redirect should trigger.
      *
-     * @param array{'timeout': int|float}|array<never, never> $options
+     * @param TimeoutOptions|MaybeNothing $options
      */
     public function redirect(string $url, array $options = []): self
     {
@@ -212,22 +218,22 @@ final class Phpjs implements JsonSerializable
     }
 
     /**
-     * @param array<int|string, JsonSerializable|array<array-key, mixed>|scalar>|scalar $triggerDataOrSelector
-     * @param array<int|string, JsonSerializable|array<array-key, mixed>|scalar> $triggerData
+     * @param string|JsonData $triggerSelectorOrData
+     * @param JsonData $triggerData
      */
-    public function trigger(string $triggerName, $triggerDataOrSelector, array $triggerData = []): self
+    public function trigger(string $triggerName, $triggerSelectorOrData, $triggerData = []): self
     {
         if (func_num_args() == 2) {
             $this->triggers[] = [
                 'trigger' => $triggerName,
                 'selector' => null,
-                'data' => $triggerDataOrSelector,
+                'data' => $triggerSelectorOrData,
             ];
         } else {
             $this->triggers[] = [
                 'trigger' => $triggerName,
-                'selector' => $triggerDataOrSelector,
-                'data' => $triggerData,
+                'selector' => $triggerSelectorOrData,
+                'data' => is_scalar($triggerData) ? $triggerData : (array)$triggerData,
             ];
         }
 
@@ -251,7 +257,7 @@ final class Phpjs implements JsonSerializable
      */
     public function toHtml(bool $returnOutput = false)
     {
-        $out = '<div data-trigger style="display:none">'.$this->jsonEncode($this->triggers).'</div>';
+        $out = '<div data-trigger style="display:none">' . $this->jsonEncode($this->triggers) . '</div>';
         $this->triggers = [];
         if ($returnOutput) {
             return $out;
@@ -262,17 +268,17 @@ final class Phpjs implements JsonSerializable
 
     /**
      * @param array<int|string, mixed> $mixed
-     * @param int|null $options {@see json_encode()} options.
      */
-    private function jsonEncode(array $mixed, int $options = null): string
+    private function jsonEncode(array $mixed): string
     {
-        if (is_null($options)) {
-            $options = JSON_HEX_TAG;
-        }
-
-        return (string)json_encode($mixed, $options);
+        return (string)json_encode($mixed, JSON_HEX_TAG);
     }
 
+    /**
+     * @return (array|mixed)[]
+     *
+     * @psalm-return array{_: array<int|string, mixed>,...}
+     */
     public function jsonSerialize(): array
     {
         return $this->toArray();
