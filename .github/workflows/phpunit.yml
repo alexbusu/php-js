@@ -42,7 +42,7 @@ jobs:
           restore-keys: "php-${{ matrix.php-version }}"
 
       - name: "Test with lowest dependencies"
-        run: "composer update --prefer-lowest --no-interaction --no-progress && vendor/bin/phpunit && vendor/bin/psalm.phar --show-info=true --php-version ${{ matrix.php-version }} && vendor/bin/rector --dry-run"
+        run: "composer update --prefer-lowest --no-interaction --no-progress && vendor/bin/phpunit && vendor/bin/psalm.phar --show-info=true --php-version=${{ matrix.php-version }} && vendor/bin/rector --dry-run"
 
       - name: "Test with highest dependencies"
-        run: "composer update                 --no-interaction --no-progress && vendor/bin/phpunit && vendor/bin/psalm.phar --show-info=true --php-version ${{ matrix.php-version }} && vendor/bin/rector --dry-run"
+        run: "composer update                 --no-interaction --no-progress && vendor/bin/phpunit && vendor/bin/psalm.phar --show-info=true --php-version=${{ matrix.php-version }} && vendor/bin/rector --dry-run"
