@@ -279,6 +279,7 @@ final class Phpjs implements JsonSerializable
      *
      * @psalm-return array{_: array<int|string, mixed>,...}
      */
+    #[\Override]
     public function jsonSerialize(): array
     {
         return $this->toArray();
