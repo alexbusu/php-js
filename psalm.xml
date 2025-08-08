@@ -15,4 +15,11 @@
             <directory name="vendor" />
         </ignoreFiles>
     </projectFiles>
+    <issueHandlers>
+        <UndefinedAttributeClass>
+            <errorLevel type="suppress">
+                <file path="src/Phpjs.php"/>
+            </errorLevel>
+        </UndefinedAttributeClass>
+    </issueHandlers>
 </psalm>
