@@ -223,7 +223,7 @@ final class Phpjs implements JsonSerializable
      */
     public function trigger(string $triggerName, $triggerSelectorOrData, $triggerData = []): self
     {
-        if (func_num_args() == 2) {
+        if (func_num_args() === 2) {
             $this->triggers[] = [
                 'trigger' => $triggerName,
                 'selector' => null,
@@ -252,10 +252,7 @@ final class Phpjs implements JsonSerializable
         ]);
     }
 
-    /**
-     * @return int|string
-     */
-    public function toHtml(bool $returnOutput = false)
+    public function toHtml(bool $returnOutput = false): string|int
     {
         $out = '<div data-trigger style="display:none">' . $this->jsonEncode($this->triggers) . '</div>';
         $this->triggers = [];
